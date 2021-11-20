@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.HttpSolrClient;
 import org.apache.solr.common.SolrInputDocument;
-import solrdocparser.SolrDocParser;
+import solrparser.SolrDocParser;
 
 /**
  * @author Valeo
@@ -26,6 +26,8 @@ public class MiClienteAddDocsSolrj {
             solr.add(doc);
         
         solr.commit();
+        
+        System.out.println("Num de documentos procesadas: " + docs.size());
     }
     
 }

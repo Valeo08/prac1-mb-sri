@@ -1,4 +1,4 @@
-package solrdocparser;
+package solrparser;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -37,6 +37,8 @@ public class SolrDocParser {
             StringBuilder tempText = new StringBuilder();
             
             while ((line = br.readLine()) != null) {
+                if (line.length() == 0) continue; // Linea en blanco
+                
                 if (line.length() > 1) {
                     String init = line.substring(0,2);
                 
@@ -72,20 +74,20 @@ public class SolrDocParser {
                             state = 5;
                             continue;
                     }
-
-                    switch (state) {
-                        case 2: // Agregando el titulo
-                            tempTitle.append(line).append(" ");
-                            break;
-                        case 3: // Agregando el autor
-                            doc.addField("author", line);
-                            break;
-                        case 4: // Leyendo el texto de descripcion
-                            tempText.append(line).append(" ");
-                            break;
-                        case 5: // Obviando lineas
-                            break;
-                    }
+                }
+                
+                switch (state) {
+                    case 2: // Agregando el titulo
+                        tempTitle.append(line).append(" ");
+                        break;
+                    case 3: // Agregando el autor
+                        doc.addField("author", line);
+                        break;
+                    case 4: // Leyendo el texto de descripcion
+                        tempText.append(line).append(" ");
+                        break;
+                    case 5: // Obviando lineas
+                        break;
                 }
             }
             
