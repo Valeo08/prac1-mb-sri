@@ -51,6 +51,12 @@ public class SolrQueryParser {
                             }
                             
                             qry = new SolrQuery();
+                            qry.addSort("score", SolrQuery.ORDER.desc);
+                            qry.setRows(2000);
+                            qry.addField("id");
+                            qry.addField("title");
+                            qry.addField("score");
+                            
                             tempTitle = new StringBuilder();
                             tempAuthor = new StringBuilder();
                             tempText = new StringBuilder();
@@ -151,7 +157,7 @@ public class SolrQueryParser {
     }
     
     private static String remove_incorrect_symbols(final String base) {
-        return base.replaceAll("[^a-zA-Z0-9' ']", "");  
+        return base.replaceAll("[^a-zA-Z0-9' ']", "");
     }
     
 }
