@@ -6,14 +6,13 @@ import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.HttpSolrClient;
 import org.apache.solr.client.solrj.response.QueryResponse;
-import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import solrparser.SolrQueryParser;
 
 /**
  * @author Valeo
  */
-public class MiClienteQueryDocsSolr {
+public class MiClienteQueryDocsSolrj {
     
     public static void main(String[] args) throws IOException,
 			SolrServerException {
@@ -21,7 +20,7 @@ public class MiClienteQueryDocsSolr {
         HttpSolrClient solr = new HttpSolrClient.Builder("http://localhost:8983/solr/gettingstarted").build();
         QueryResponse rsp;
         
-        // Ruta al fichero de docuementos del corpus
+        // Ruta al fichero de documentos del corpus
         String path = "./docs_to_import/CISI.QRY";
         
         ArrayList<SolrQuery> queries = SolrQueryParser.parseQueries(path);
@@ -32,8 +31,8 @@ public class MiClienteQueryDocsSolr {
             results.add(rsp.getResults());
         }
         
-        // DEBUG: si queremos visualizar cuantos documentos se han
-        // recuperado con cada consulta y los titulos y scores de cada uno
+        // Visualizar cuantos documentos se han recuperado con cada
+        // consulta y los titulos y scores de cada uno
         for (int i = 0; i < results.size(); i++) {
             System.out.println("Num resultados para la consulta " 
                      + (i+1) + ": " + results.get(i).getNumFound());

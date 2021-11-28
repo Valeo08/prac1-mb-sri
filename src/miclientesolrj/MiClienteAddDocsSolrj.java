@@ -17,7 +17,7 @@ public class MiClienteAddDocsSolrj {
 
         HttpSolrClient solr = new HttpSolrClient.Builder("http://localhost:8983/solr/gettingstarted").build();
 
-        // Ruta al fichero de docuementos del corpus
+        // Ruta al fichero de documentos del corpus
         String path = "./docs_to_import/CISI.ALL";
         
         ArrayList<SolrInputDocument> docs = SolrDocParser.parseDocs(path);
