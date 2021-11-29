@@ -132,18 +132,6 @@ public class SolrQueryParser {
     private static void setQuery(SolrQuery q, StringBuilder title,
             StringBuilder author, StringBuilder text) {
         
-        if (title.length() != 0) {
-            q.setQuery("title:" + 
-                    remove_incorrect_whitespaces(title.toString()));
-            return;
-        }
-        
-        if (author.length() != 0) {
-            q.setQuery("author:" + 
-                    remove_incorrect_whitespaces(author.toString()));
-            return;
-        }
-        
         if (text.length() != 0)
             q.setQuery("text_en:" + 
                     remove_incorrect_whitespaces(text.toString()));

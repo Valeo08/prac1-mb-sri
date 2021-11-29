@@ -50,8 +50,8 @@ public class MiClienteGenTrecEvalSolrj {
                     // Número de consulta
                     sb.append(i+1).append(" ");
                     
-                    // Q0 - ?????????
-                    sb.append("Q0 ");
+                    // Iteración
+                    sb.append("It-01 ");
                     
                     // ID documento
                     sb.append(results.get(i).get(j)
@@ -77,9 +77,6 @@ public class MiClienteGenTrecEvalSolrj {
             System.out.println("An error occurred!");
             ex.printStackTrace();
         }
-        
-        
-        // Generamos a continuación el fichero trec_rel_file
         
     }
     
