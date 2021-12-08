@@ -1,16 +1,25 @@
 package solrparser;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import org.apache.solr.client.solrj.SolrQuery;
+import org.apache.solr.client.solrj.SolrServerException;
+import org.apache.solr.client.solrj.impl.HttpSolrClient;
+import org.apache.solr.client.solrj.response.QueryResponse;
+import org.apache.solr.common.SolrDocumentList;
 
 /**
  * @author Valeo
  */
 public class SolrQueryParser {
     
+    // Método para parsear las queries de un documento en el formato
+    // que Solr acepta.
     public static ArrayList<SolrQuery> parseQueries(final String path) {
         ArrayList<SolrQuery> queries = new ArrayList<>();
         
@@ -80,34 +89,19 @@ public class SolrQueryParser {
                 
                 switch (state) {
                     case 2: // Leyendo titulo
-                    {
-                        String[] tmp = 
+                        tempTitle.append(
                                 remove_incorrect_symbols(
-                                        remove_incorrect_whitespaces(line)).split(" ");
-                        for (int i = 0; i < tmp.length && i != 6; i++)
-                            tempTitle.append(tmp[i]).append(" ");
-                    }
-                    state = 5;
+                                        remove_incorrect_whitespaces(line))).append(" ");
                         break;
                     case 3: // Leyendo autor
-                    {
-                        String[] tmp = 
-                                remove_incorrect_symbols(
-                                        remove_incorrect_whitespaces(line)).split(" ");
-                        for (int i = 0; i < tmp.length && i != 6; i++)
-                            tempAuthor.append(tmp[i]).append(" ");
-                    }
-                    state = 5;
+                        tempAuthor.append(
+                                    remove_incorrect_symbols(
+                                            remove_incorrect_whitespaces(line))).append(" ");
                         break;
                     case 4: // Leyendo texto
-                    {
-                        String[] tmp = 
+                        tempText.append(
                                 remove_incorrect_symbols(
-                                        remove_incorrect_whitespaces(line)).split(" ");
-                        for (int i = 0; i < tmp.length && i != 6; i++)
-                            tempText.append(tmp[i]).append(" ");
-                    }
-                    state = 5;
+                                        remove_incorrect_whitespaces(line))).append(" ");
                         break;
                     case 5: // Obviando lineas - No considerado
                         break;
@@ -136,6 +130,62 @@ public class SolrQueryParser {
             q.setQuery("text_en:" + 
                     remove_incorrect_whitespaces(text.toString()));
         
+    }
+    
+    // Método para generar un fichero de tipo trec_top_file para la
+    // evaluación de nuestro SRI mediante TREC_EVAL
+    public static void generateTrecEvalFile(final String trecFileName, 
+            final ArrayList<SolrQuery> queries, final HttpSolrClient solr)
+        throws SolrServerException, IOException {
+        QueryResponse rsp;
+        ArrayList<SolrDocumentList> results = new ArrayList<>();
+
+        for (SolrQuery q : queries) {
+            rsp = solr.query(q);
+            results.add(rsp.getResults());
+        }
+        
+        File trecFile = new File(trecFileName);
+        
+        if (trecFile.exists()) trecFile.delete();
+        
+        try {
+            BufferedWriter bw = new BufferedWriter(new FileWriter(trecFile));
+            
+            for (int i = 0; i < results.size(); i++) {
+                for (int j = 0; j < results.get(i).size(); j++) {
+                    StringBuilder sb = new StringBuilder();
+                    
+                    // Número de consulta
+                    sb.append(i+1).append(" ");
+                    
+                    // Iteración
+                    sb.append("Q-01 ");
+                    
+                    // ID documento
+                    sb.append(results.get(i).get(j)
+                            .getFieldValue("id")).append(" ");
+                    
+                    // Ranking
+                    sb.append(j).append(" ");
+                    
+                    // Score
+                    sb.append(results.get(i).get(j)
+                            .getFieldValue("score")).append(" ");
+                    
+                    // Equipo
+                    sb.append("VALEO");
+                    
+                    sb.append("\n");
+                    bw.write(sb.toString());
+                }
+            }
+            
+            bw.close();
+        } catch (IOException ex) {
+            System.out.println("An error occurred!");
+            ex.printStackTrace();
+        }
     }
     
     // Método auxiliar para eliminar los espacios al principio
