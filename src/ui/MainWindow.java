@@ -489,10 +489,10 @@ public class MainWindow extends javax.swing.JFrame {
         int resp = jfc.showOpenDialog(this);
 
         if (resp == JFileChooser.APPROVE_OPTION) {
-            if (!btnIndexarDocs.isEnabled()) btnIndexarDocs.setEnabled(true);
-            
             labelMsgCargarDocs.setForeground(Color.WHITE);
             labelMsgCargarDocs.setText("Cargando documentos...");
+            
+            if (!btnIndexarDocs.isEnabled()) btnIndexarDocs.setEnabled(true);
             
             docs = SolrDocParser.parseDocs(jfc.getSelectedFile().getAbsolutePath());
             

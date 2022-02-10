@@ -2,16 +2,23 @@ package solrparser;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.HttpSolrClient;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocumentList;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 /**
  * @author Valeo
@@ -46,6 +53,13 @@ public class SolrQueryParser {
             StringBuilder tempAuthor = new StringBuilder();
             StringBuilder tempText = new StringBuilder();
             
+            // Para leer las anotaciones de GATE
+            DocumentBuilder newDocumentBuilder;
+            Document parse;
+            NodeList root, nl;
+            
+            ArrayList<StringBuilder> annotations = null;
+            
             while ((line = br.readLine()) != null) {
                 if (line.length() == 0) continue;
                 
@@ -55,7 +69,8 @@ public class SolrQueryParser {
                     switch (init) {
                         case ".I": // Leyendo ID
                             if (qry != null) {
-                                setQuery(qry, tempTitle, tempAuthor, tempText);
+                                setQuery(qry, tempTitle, tempAuthor, 
+                                        tempText, annotations);
                                 queries.add(qry);
                             }
                             
@@ -69,6 +84,10 @@ public class SolrQueryParser {
                             tempTitle = new StringBuilder();
                             tempAuthor = new StringBuilder();
                             tempText = new StringBuilder();
+                            
+                            annotations = new ArrayList<>();
+                            for (int i = 0; i < 8; i++)
+                                annotations.add(new StringBuilder());
                             
                             state = 1;
                             continue;
@@ -87,21 +106,59 @@ public class SolrQueryParser {
                     }
                 }
                 
+                String texto;
+                try {
+                    // Tratar la anotaciones de GATE
+                    String textP = "<root>" + line + "</root>";
+                    newDocumentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+                    newDocumentBuilder.setErrorHandler(null);
+                    parse = newDocumentBuilder.parse(new ByteArrayInputStream(textP.getBytes()));
+                    root = parse.getChildNodes();
+                    nl = root.item(0).getChildNodes();
+                    texto = root.item(0).getTextContent();
+                    
+                    if (qry != null) {
+                        for (int i = 0; i < nl.getLength(); i++) {
+                            if (!nl.item(i).getNodeName().equals("#text")) {
+                                String attNamePre = nl.item(i).getNodeName();
+                                String attValue = nl.item(i).getTextContent();
+                                String attName = getAnnotationIndexName(attNamePre);
+                                int attInd = getAnnotationIndexNumber(attNamePre);
+                                
+                                if (annotations != null) {
+                                    if (annotations.get(attInd).length() == 0)
+                                        annotations.get(attInd).append(attName)
+                                                .append(":").append(attValue);
+                                    else
+                                        annotations.get(attInd).append(" OR ")
+                                                .append(attName).append(":").append(attValue);
+                                }
+                                
+                            }
+                        }
+                    }
+                } catch (ParserConfigurationException | SAXException ex) {
+                    // Si hay un error al parsear se obvian las anotaciones
+                    texto = line;
+                    //System.out.println("An error occurred reading annotations!");
+                }
+                
+                // Agregar el titulo, el autor y la descripcion
                 switch (state) {
                     case 2: // Leyendo titulo
                         tempTitle.append(
                                 remove_incorrect_symbols(
-                                        remove_incorrect_whitespaces(line))).append(" ");
+                                        remove_incorrect_whitespaces(texto))).append(" ");
                         break;
                     case 3: // Leyendo autor
                         tempAuthor.append(
                                     remove_incorrect_symbols(
-                                            remove_incorrect_whitespaces(line))).append(" ");
+                                            remove_incorrect_whitespaces(texto))).append(" ");
                         break;
                     case 4: // Leyendo texto
                         tempText.append(
                                 remove_incorrect_symbols(
-                                        remove_incorrect_whitespaces(line))).append(" ");
+                                        remove_incorrect_whitespaces(texto))).append(" ");
                         break;
                     case 5: // Obviando lineas - No considerado
                         break;
@@ -109,7 +166,7 @@ public class SolrQueryParser {
             }
             
             if (line == null && qry != null) {
-                setQuery(qry, tempTitle, tempAuthor, tempText);
+                setQuery(qry, tempTitle, tempAuthor, tempText, annotations);
                 queries.add(qry);
             }
             
@@ -124,12 +181,33 @@ public class SolrQueryParser {
     // Método para establecer la consulta adecuada dependiendo del contenido
     // leído del fichero correspondiente
     private static void setQuery(SolrQuery q, StringBuilder title,
-            StringBuilder author, StringBuilder text) {
+            StringBuilder author, StringBuilder text,
+            ArrayList<StringBuilder> annotations) {
+        StringBuilder qryText = new StringBuilder();
         
+        // Agregar los campos de descripcion, autor y titulo a la consulta
         if (text.length() != 0)
-            q.setQuery("text_en:" + 
-                    remove_incorrect_whitespaces(text.toString()));
+            qryText.append("text_en:").append(remove_incorrect_whitespaces(text.toString()));
         
+        if (author.length() != 0) {
+            if (qryText.length() != 0)
+                qryText.append(" OR ").append(remove_incorrect_whitespaces(author.toString()));
+            else qryText.append(remove_incorrect_whitespaces(author.toString()));
+        }
+         
+        if (title.length() != 0) {
+            if (qryText.length() != 0)
+                qryText.append(" OR ").append(remove_incorrect_whitespaces(title.toString()));
+            else qryText.append(remove_incorrect_whitespaces(title.toString()));
+        }
+        
+        // Agregar las anotaciones de GATE a la consulta
+        for (StringBuilder sb : annotations) {
+            if (sb.length() != 0)
+                qryText.append(" OR ").append(sb.toString());
+        }
+        
+        q.setQuery(qryText.toString());
     }
     
     // Método para generar un fichero de tipo trec_top_file para la
@@ -186,6 +264,72 @@ public class SolrQueryParser {
             System.out.println("An error occurred!");
             ex.printStackTrace();
         }
+    }
+    
+    // Obtener el nombre para indexar la anotacion correspondiente
+    private static String getAnnotationIndexName(String annotName) {
+        String attName;
+        switch (annotName) {
+            case "Person":
+                attName = "personas";
+                break;
+            case "Location":
+                attName = "lugares";
+                break;
+            case "Organization":
+                attName = "organizaciones";
+                break;
+            case "Date":
+                attName = "fechas";
+                break;
+            case "Identifier":
+                attName = "identificadores";
+                break;
+            case "Money":
+                attName = "dinero";
+                break;
+            case "Percent":
+                attName = "porcentajes";
+                break;
+            case "Unknown":
+            default:
+                attName = "tdesconocidos";
+                break;
+        }
+        return attName;
+    }
+    
+    // Obtener el nombre para indexar la anotacion correspondiente
+    private static int getAnnotationIndexNumber(String annotName) {
+        int attNumber;
+        switch (annotName) {
+            case "Person":
+                attNumber = 0;
+                break;
+            case "Location":
+                attNumber = 1;
+                break;
+            case "Organization":
+                attNumber = 2;
+                break;
+            case "Date":
+                attNumber = 3;
+                break;
+            case "Identifier":
+                attNumber = 4;
+                break;
+            case "Money":
+                attNumber = 5;
+                break;
+            case "Percent":
+                attNumber = 6;
+                break;
+            case "Unknown":
+            default:
+                attNumber = 7;
+                break;
+        }
+        return attNumber;
     }
     
     // Método auxiliar para eliminar los espacios al principio
