@@ -191,13 +191,13 @@ public class SolrQueryParser {
         
         if (author.length() != 0) {
             if (qryText.length() != 0)
-                qryText.append(" OR ").append(remove_incorrect_whitespaces(author.toString()));
+                qryText.append(" OR author:").append(remove_incorrect_whitespaces(author.toString()));
             else qryText.append(remove_incorrect_whitespaces(author.toString()));
         }
          
         if (title.length() != 0) {
             if (qryText.length() != 0)
-                qryText.append(" OR ").append(remove_incorrect_whitespaces(title.toString()));
+                qryText.append(" OR title:").append(remove_incorrect_whitespaces(title.toString()));
             else qryText.append(remove_incorrect_whitespaces(title.toString()));
         }
         
